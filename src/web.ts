@@ -1,5 +1,5 @@
 import { WebPlugin } from '@capacitor/core';
-import { GoogleAuthPlugin } from './definitions';
+import { GoogleAuthPlugin, Account } from './definitions';
 // @ts-ignore
 import config from '../../../../../capacitor.config.json';
 
@@ -96,6 +96,19 @@ export class GoogleAuthWeb extends WebPlugin implements GoogleAuthPlugin {
 
   async signOut(): Promise<any> {
     return gapi.auth2.getAuthInstance().signOut();
+  }
+
+  async getCurrentAccount(): Promise<Account> {
+    const profile = await gapi.auth2.getAuthInstance().currentUser.get().getBasicProfile();
+    if (!profile) return null;
+    else return {
+      id: profile.getId(),
+      displayName: profile.getName(),
+      imageUrl: profile.getImageUrl(),
+      email: profile.getEmail(),
+      givenName: profile.getGivenName(),
+      familyName: profile.getFamilyName(),
+    }
   }
 }
 
