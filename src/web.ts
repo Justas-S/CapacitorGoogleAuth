@@ -1,40 +1,41 @@
-import { WebPlugin } from '@capacitor/core';
-import { GoogleAuthPlugin, Account } from './definitions';
-// @ts-ignore
-import config from '../../../../../capacitor.config.json';
+import { WebPlugin } from "@capacitor/core";
+import { GoogleAuthPlugin, Account, WebConfig } from "./definitions";
 
 export class GoogleAuthWeb extends WebPlugin implements GoogleAuthPlugin {
+
+  private webConfig: WebConfig;
+
   constructor() {
     super({
       name: 'GoogleAuth',
       platforms: ['web']
     });
-
-    this.initialize();
   }
+  initialize(config: WebConfig): Promise<void> {
+    this.webConfig = config;
+    let scopes = null;
+    if (config.scopes) {
+      scopes = config.scopes.join(" ");
+    }
+    const clientConfig = {
+      client_id: config.clientId,
+      scope: scopes
+    };
 
-  initialize() {
-    var head = document.getElementsByTagName('head')[0];
-    var script = document.createElement('script');
-    script.type = 'text/javascript';
-    script.defer = true;
-    script.async = true;
-    script.onload = this.platformJsLoaded;
-    script.src = 'https://apis.google.com/js/platform.js';
-    head.appendChild(script);
-  }
-
-  platformJsLoaded() {
-    gapi.load('auth2', async () => {
-      const clientConfig: gapi.auth2.ClientConfig = {
-        client_id: (document.getElementsByName('google-signin-client_id')[0] as any).content
+    return new Promise((resolv, reject) => {
+      var head = document.getElementsByTagName("head")[0];
+      var script = document.createElement("script");
+      script.type = "text/javascript";
+      script.defer = true;
+      script.async = true;
+      script.onload = () => {
+        gapi.load("auth2", () => {
+          gapi.auth2.init(clientConfig).then(() => resolv(), reject);
+        });
       };
-
-      if (config.plugins.GoogleAuth != null && config.plugins.GoogleAuth.scopes != null) {
-        clientConfig.scope = config.plugins.GoogleAuth.scopes.join(' ');
-      }
-
-      gapi.auth2.init(clientConfig);
+      script.onerror = reject;
+      script.src = "https://apis.google.com/js/platform.js";
+      head.appendChild(script);
     });
   }
 
@@ -45,7 +46,7 @@ export class GoogleAuthWeb extends WebPlugin implements GoogleAuthPlugin {
 
         var needsOfflineAccess = false;
         try {
-          needsOfflineAccess = config.plugins.GoogleAuth.serverClientId != null;
+          needsOfflineAccess = this.webConfig.serverClientId != null;
         } catch {
 
         }
@@ -77,7 +78,7 @@ export class GoogleAuthWeb extends WebPlugin implements GoogleAuthPlugin {
         user.authentication = {
           accessToken: authResponse.access_token,
           idToken: authResponse.id_token
-        }
+        };
 
         resolve(user);
       } catch (error) {
@@ -87,11 +88,11 @@ export class GoogleAuthWeb extends WebPlugin implements GoogleAuthPlugin {
   }
 
   async refresh(): Promise<any> {
-    const authResponse = await gapi.auth2.getAuthInstance().currentUser.get().reloadAuthResponse()
+    const authResponse = await gapi.auth2.getAuthInstance().currentUser.get().reloadAuthResponse();
     return {
       accessToken: authResponse.access_token,
       idToken: authResponse.id_token
-    }
+    };
   }
 
   async signOut(): Promise<any> {
@@ -99,22 +100,30 @@ export class GoogleAuthWeb extends WebPlugin implements GoogleAuthPlugin {
   }
 
   async getCurrentAccount(): Promise<Account> {
-    const profile = await gapi.auth2.getAuthInstance().currentUser.get().getBasicProfile();
+    const user = gapi.auth2.getAuthInstance().currentUser.get();
+    const profile = user.getBasicProfile();
+
     if (!profile) return null;
-    else return {
-      id: profile.getId(),
-      displayName: profile.getName(),
-      imageUrl: profile.getImageUrl(),
-      email: profile.getEmail(),
-      givenName: profile.getGivenName(),
-      familyName: profile.getFamilyName(),
-    }
+    else
+      return {
+        id: profile.getId(),
+        displayName: profile.getName(),
+        imageUrl: profile.getImageUrl(),
+        email: profile.getEmail(),
+        givenName: profile.getGivenName(),
+        familyName: profile.getFamilyName(),
+        idToken: user.getAuthResponse().id_token
+      };
   }
 }
 
 const GoogleAuth = new GoogleAuthWeb();
 
-export { GoogleAuth };
+function initializeWeb(config: WebConfig): Promise<void> {
+  return GoogleAuth.initialize(config);
+}
 
-import { registerWebPlugin } from '@capacitor/core';
+export { GoogleAuth, initializeWeb };
+
+import { registerWebPlugin } from "@capacitor/core";
 registerWebPlugin(GoogleAuth);

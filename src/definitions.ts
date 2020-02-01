@@ -11,6 +11,13 @@ export interface Account {
   givenName?: string;
   id: string;
   imageUrl?: string;
+  idToken?: string;
+}
+
+export interface WebConfig {
+  clientId: string;
+  serverClientId?: string;
+  scopes?: Array<string>;
 }
 
 export interface GoogleAuthPlugin {
