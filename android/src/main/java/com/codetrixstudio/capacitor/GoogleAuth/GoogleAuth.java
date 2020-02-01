@@ -1,6 +1,7 @@
 package com.codetrixstudio.capacitor.GoogleAuth;
 
 import android.content.Intent;
+import android.util.Log;
 
 import com.codetrixstudio.capacitor.GoogleAuth.capacitorgoogleauth.R;
 import com.getcapacitor.JSObject;
@@ -26,6 +27,7 @@ public class GoogleAuth extends Plugin {
 
   @Override
   public void load() {
+    Log.d(getLogTag(), "Entering load()");
     String clientId = this.getContext().getString(R.string.server_client_id);
     GoogleSignInOptions.Builder googleSignInBuilder = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
       .requestIdToken(clientId)
@@ -34,13 +36,16 @@ public class GoogleAuth extends Plugin {
 
     try {
       JSONArray scopeArray = (JSONArray) getConfigValue("scopes");
-      Scope[] scopes = new Scope[scopeArray.length() - 1];
-      Scope firstScope = new Scope(scopeArray.getString(0));
-      for (int i = 1; i < scopeArray.length(); i++) {
-        scopes[i - 1] = new Scope(scopeArray.getString(i));
+      if (scopeArray != null) {
+        Scope[] scopes = new Scope[scopeArray.length() - 1];
+        Scope firstScope = new Scope(scopeArray.getString(0));
+        for (int i = 1; i < scopeArray.length(); i++) {
+          scopes[i - 1] = new Scope(scopeArray.getString(i));
+        }
+        googleSignInBuilder.requestScopes(firstScope, scopes);
       }
-      googleSignInBuilder.requestScopes(firstScope, scopes);
     } catch (JSONException e) {
+      Log.e(getLogTag(), "Cannot parse request scopes");
       e.printStackTrace();
     }
 
@@ -50,6 +55,7 @@ public class GoogleAuth extends Plugin {
 
   @PluginMethod()
   public void signIn(PluginCall call) {
+    Log.d(getLogTag(), "Entering signIn()");
     saveCall(call);
     Intent signInIntent = googleSignInClient.getSignInIntent();
     startActivityForResult(call, signInIntent, RC_SIGN_IN);
@@ -57,6 +63,7 @@ public class GoogleAuth extends Plugin {
 
   @Override
   protected void handleOnActivityResult(int requestCode, int resultCode, Intent data) {
+    Log.d(getLogTag(), "Entering handleOnActivityResult(" + requestCode + ", " + resultCode + ")");
     super.handleOnActivityResult(requestCode, resultCode, data);
 
     if (requestCode == RC_SIGN_IN) {
@@ -93,12 +100,14 @@ public class GoogleAuth extends Plugin {
 
   @PluginMethod()
   public void signOut(final PluginCall call) {
+    Log.d(getLogTag(), "Entering signOut()");
     googleSignInClient.signOut();
     call.success();
   }
 
   @PluginMethod()
   public void getCurrentAccount(final PluginCall call) {
+    Log.d(getLogTag(), "Entering getCurrentAccount()");
     GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this.getContext());
     JSObject user = null;
     if (account != null) {
